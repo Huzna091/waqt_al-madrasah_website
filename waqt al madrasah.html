@@ -1,0 +1,3204 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waqt al-Madrasah - Sistem Kehadiran Guru</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* === VARIABLES === */
+        :root {
+            --primary-color: #1d3e87;
+            --secondary-color: #2f58c2;
+            --light-color: #f2f5ff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --gray-color: #6c757d;
+            --white: #ffffff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.15);
+            --radius: 8px;
+        }
+
+        /* === GLOBAL STYLE === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Login Background */
+        .login-body {
+            background-image: url('https://i.pinimg.com/736x/b3/8a/4d/b38a4dcf16d47c995a970d4f383bad60.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .login-body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(3px);
+            z-index: -1;
+        }
+
+        /* Admin Dashboard Background */
+        .admin-body {
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        /* === NAVBAR === */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: var(--white);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            height: 60px;
+        }
+
+        .navbar h1 { 
+            font-size: 1.25rem; 
+            margin: 0; 
+            font-weight: 600; 
+            letter-spacing: 0.5px;
+        }
+
+        .navbar .profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .navbar .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: var(--radius);
+            transition: background-color 0.2s;
+        }
+
+        .navbar .profile-info:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .navbar .profile-pic-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+        }
+
+        .navbar .menu-icon {
+            cursor: pointer;
+            font-size: 1.25rem;
+            user-select: none;
+            transition: transform 0.2s;
+            padding: 5px;
+        }
+
+        .navbar .menu-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+            width: 180px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1001;
+        }
+
+        .dropdown button {
+            background: none;
+            border: none;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: var(--primary-color);
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dropdown button i {
+            width: 16px;
+            text-align: center;
+        }
+
+        .dropdown button:hover {
+            background: var(--light-color);
+        }
+
+        /* === CONTAINER === */
+        .container {
+            width: 90%;
+            max-width: 450px;
+            background: rgba(255, 255, 255, 0.97);
+            padding: 28px 24px;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+            animation: fadeIn 0.5s ease-in-out;
+            margin-top: 70px;
+            text-align: center;
+        }
+
+        .admin-container {
+            display: none;
+            width: 100%;
+            max-width: none;
+            margin-top: 0;
+            background: transparent;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary-color);
+            display: inline-block;
+            padding-bottom: 6px;
+        }
+
+        /* === FORM ELEMENTS === */
+        .form-group {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #444;
+            font-size: 0.9rem;
+        }
+
+        input, select, button, textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius);
+            border: 1px solid #d1d5db;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 6px rgba(29,62,135,0.3);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--white);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #152d63, #244a9b);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--warning-color);
+            color: black;
+        }
+
+        .btn-secondary:hover {
+            background: #e0a800;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-link {
+            background: transparent;
+            color: var(--primary-color);
+            text-decoration: underline;
+            box-shadow: none;
+            padding: 8px;
+            margin-top: 5px;
+        }
+
+        .btn-link:hover {
+            background: transparent;
+            transform: none;
+            box-shadow: none;
+            color: var(--secondary-color);
+        }
+
+        /* === MESSAGE === */
+        .message {
+            text-align: center;
+            font-weight: 600;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            padding: 10px;
+            border-radius: var(--radius);
+        }
+
+        .message.success {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .message.error {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .message.info {
+            background-color: rgba(23, 162, 184, 0.1);
+            color: #17a2b8;
+            border: 1px solid rgba(23, 162, 184, 0.3);
+        }
+
+        .message.warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #856404;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        /* === PROFILE PIC === */
+        .profile-pic {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            margin: 10px auto 20px;
+            border: 4px solid var(--primary-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        }
+
+        /* === ATTENDANCE STATUS === */
+        .attendance-status {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .status-card {
+            padding: 15px;
+            border-radius: var(--radius);
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .status-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .status-card.hadir {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .status-card.tidak-hadir {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .status-card.absent {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #856404;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        /* === LOCATION DISPLAY === */
+        .location-container {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: var(--light-color);
+            border-radius: var(--radius);
+            border: 1px solid rgba(29, 62, 135, 0.2);
+        }
+
+        .location-info {
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .location-info p {
+            margin: 5px 0;
+        }
+
+        .location-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .location-status.verified {
+            background-color: rgba(40, 167, 69, 0.2);
+            color: var(--success-color);
+        }
+
+        .location-status.not-verified {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: var(--danger-color);
+        }
+
+        .location-status.checking {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: #856404;
+        }
+
+        /* === HISTORY TABLE === */
+        .history-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .history-title {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .history-table th, .history-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .history-table th {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .history-table tr:hover {
+            background-color: rgba(242, 245, 255, 0.5);
+        }
+
+        /* === PASSWORD STRENGTH === */
+        .password-strength {
+            height: 5px;
+            border-radius: 5px;
+            margin-top: 5px;
+            transition: all 0.3s;
+        }
+
+        .password-strength.weak {
+            background-color: var(--danger-color);
+            width: 33%;
+        }
+
+        .password-strength.medium {
+            background-color: var(--warning-color);
+            width: 66%;
+        }
+
+        .password-strength.strong {
+            background-color: var(--success-color);
+            width: 100%;
+        }
+
+        /* === ADMIN DASHBOARD STYLES === */
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 60px;
+            width: 250px;
+            height: calc(100vh - 60px);
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            padding: 2rem 0;
+            z-index: 999;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            color: var(--dark-color);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background: var(--light-color);
+            border-right: 4px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            margin-top: 60px;
+            padding: 2rem;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* Dashboard Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card.hadir { border-left: 4px solid var(--success-color); }
+        .stat-card.lewat { border-left: 4px solid var(--warning-color); }
+        .stat-card.tidak-hadir { border-left: 4px solid var(--danger-color); }
+        .stat-card.total { border-left: 4px solid var(--primary-color); }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .stat-card.hadir .stat-number { color: var(--success-color); }
+        .stat-card.lewat .stat-number { color: var(--warning-color); }
+        .stat-card.tidak-hadir .stat-number { color: var(--danger-color); }
+        .stat-card.total .stat-number { color: var(--primary-color); }
+
+        /* Tables */
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background: var(--light-color);
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .status-hadir { background: #d4edda; color: var(--success-color); }
+        .status-lewat { background: #fff3cd; color: var(--warning-color); }
+        .status-tidak-hadir { background: #f8d7da; color: var(--danger-color); }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 0.25rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: black;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .close {
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--danger-color);
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* === UTILITY CLASSES === */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .mb-1 {
+            margin-bottom: 8px;
+        }
+
+        .mb-2 {
+            margin-bottom: 16px;
+        }
+
+        .mt-1 {
+            margin-top: 8px;
+        }
+
+        .mt-2 {
+            margin-top: 16px;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .align-center {
+            align-items: center;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .container { 
+                width: 95%; 
+                padding: 20px; 
+                border-radius: 12px;
+                margin-top: 60px;
+            }
+            
+            .page-title { 
+                font-size: 1.3rem; 
+            }
+            
+            input, button, select { 
+                font-size: 0.9rem; 
+                padding: 10px; 
+            }
+            
+            .navbar {
+                padding: 10px 16px;
+                height: 55px;
+            }
+            
+            .navbar h1 {
+                font-size: 1.1rem;
+            }
+            
+            .profile-pic {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body class="login-body" id="mainBody">
+
+<!-- NAVBAR -->
+<div class="navbar hidden" id="navbar">
+    <h1>Waqt al-Madrasah</h1>
+    <div class="profile">
+        <div class="profile-info" onclick="toggleMenu()">
+            <img id="profilePicSmall" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-pic-small">
+            <span id="userName">Guru</span>
+            <span class="menu-icon">▾</span>
+        </div>
+    </div>
+    <div class="dropdown" id="dropdownMenu">
+        <button onclick="openAccount()"><i>👤</i> Akaun</button>
+        <button onclick="showHistory()"><i>📊</i> Sejarah Kehadiran</button>
+        <button onclick="showChangePassword()"><i>🔒</i> Tukar Kata Laluan</button>
+        <button onclick="showAllUsers()"><i>📋</i> Senarai Pengguna</button>
+        <button onclick="logout()"><i>🚪</i> Log Keluar</button>
+    </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div class="container" id="loginPage">
+    <h2 class="page-title">Waqt al-Madrasah - Log Masuk</h2>
+    <div class="form-group">
+        <label for="loginUsername">Username atau Email</label>
+        <input type="text" id="loginUsername" placeholder="Masukkan username atau email">
+    </div>
+    <div class="form-group">
+        <label for="loginPassword">Kata Laluan</label>
+        <input type="password" id="loginPassword" placeholder="Masukkan kata laluan">
+    </div>
+    <div class="form-group">
+        <label for="userType">Jenis Pengguna</label>
+        <select id="userType">
+            <option value="teacher">Guru</option>
+            <option value="admin">Pentadbir</option>
+            <option value="hq-staff">Staff HQ</option>
+            <option value="school-admin">Admin Sekolah</option>
+        </select>
+    </div>
+    <button onclick="login()"><i>🔑</i> Log Masuk</button>
+    <p class="text-center mt-2" style="font-size:0.9rem;">
+        Belum ada akaun? <a href="#" onclick="showRegister()" style="color:var(--primary-color);">Daftar Sekarang</a>
+    </p>
+    <button class="btn-link" onclick="showForgotPassword()"><i>🔓</i> Lupa kata laluan?</button>
+</div>
+
+<!-- REGISTER PAGE -->
+<div class="container hidden" id="registerPage">
+    <h2 class="page-title">Daftar Akaun Baru</h2>
+    <div class="form-group">
+        <label for="registerName">Nama Penuh</label>
+        <input type="text" id="registerName" placeholder="Masukkan nama penuh anda">
+    </div>
+    <div class="form-group">
+        <label for="registerEmail">Emel</label>
+        <input type="email" id="registerEmail" placeholder="Masukkan emel anda">
+    </div>
+    <div class="form-group">
+        <label for="registerUsername">Username</label>
+        <input type="text" id="registerUsername" placeholder="Buat username unik">
+        <small style="font-size: 0.8rem; color: var(--gray-color);">Username akan digunakan untuk log masuk</small>
+    </div>
+    
+    <!-- Jenis Akaun - TAMBAHAN -->
+    <div class="form-group">
+        <label for="registerUserType">Jenis Akaun</label>
+        <select id="registerUserType" onchange="toggleSchoolField()">
+            <option value="teacher">Guru</option>
+            <option value="hq-staff">Staff HQ</option>
+            <option value="school-admin">Admin Sekolah</option>
+            <option value="observer">Pemerhati</option>
+        </select>
+        <small style="font-size: 0.8rem; color: var(--gray-color);">Pilih jenis pengguna</small>
+    </div>
+    
+    <!-- Sekolah Field (akan muncul untuk jenis tertentu) -->
+    <div class="form-group" id="schoolFieldGroup">
+        <label for="registerSchool">Sekolah</label>
+        <select id="registerSchool">
+            <option value="">Pilih Sekolah</option>
+            <option>Sekolah Agama Sungai Abong</option>
+            <option>Sekolah Rendah Arab Bersepadu</option>
+            <option>Sekolah Agama Parit Keroma</option>
+            <option>Pejabat Pendidikan Islam Daerah Muar</option>
+        </select>
+    </div>
+    
+    <!-- Jabatan Field untuk Staff HQ -->
+    <div class="form-group hidden" id="departmentFieldGroup">
+        <label for="registerDepartment">Jabatan</label>
+        <select id="registerDepartment">
+            <option value="">Pilih Jabatan</option>
+            <option>Jabatan Sumber Manusia</option>
+            <option>Jabatan Kewangan</option>
+            <option>Jabatan Akademik</option>
+            <option>Jabatan Pentadbiran</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="registerPassword">Kata Laluan</label>
+        <input type="password" id="registerPassword" placeholder="Buat kata laluan" onkeyup="checkPasswordStrength(this.value)">
+        <div id="passwordStrength" class="password-strength"></div>
+        <small style="font-size: 0.8rem; color: var(--gray-color);">Kata laluan mesti mengandungi sekurang-kurangnya 6 aksara</small>
+    </div>
+    <div class="form-group">
+        <label for="registerConfirm">Sahkan Kata Laluan</label>
+        <input type="password" id="registerConfirm" placeholder="Masukkan semula kata laluan">
+    </div>
+    <button onclick="register()"><i>📝</i> Daftar</button>
+    <p class="text-center mt-2" style="font-size:0.9rem;">Sudah ada akaun? <a href="#" onclick="showLogin()" style="color:var(--primary-color);">Log Masuk</a></p>
+</div>
+
+<!-- FORGOT PASSWORD PAGE -->
+<div class="container hidden" id="forgotPasswordPage">
+    <h2 class="page-title">Reset Kata Laluan</h2>
+    <div class="form-group">
+        <label for="forgotEmail">Emel</label>
+        <input type="email" id="forgotEmail" placeholder="Masukkan emel anda">
+    </div>
+    <button onclick="sendResetCode()"><i>📧</i> Hantar Kod Reset</button>
+    <button class="btn-secondary mt-1" onclick="showLogin()"><i>↩️</i> Kembali ke Log Masuk</button>
+    <div class="message" id="forgotMsg"></div>
+</div>
+
+<!-- RESET PASSWORD PAGE -->
+<div class="container hidden" id="resetPasswordPage">
+    <h2 class="page-title">Set Semula Kata Laluan</h2>
+    <div class="form-group">
+        <label for="resetCode">Kod Reset</label>
+        <input type="text" id="resetCode" placeholder="Masukkan kod reset">
+    </div>
+    <div class="form-group">
+        <label for="newPassword">Kata Laluan Baru</label>
+        <input type="password" id="newPassword" placeholder="Buat kata laluan baru" onkeyup="checkPasswordStrength(this.value, 'resetPasswordStrength')">
+        <div id="resetPasswordStrength" class="password-strength"></div>
+    </div>
+    <div class="form-group">
+        <label for="confirmNewPassword">Sahkan Kata Laluan Baru</label>
+        <input type="password" id="confirmNewPassword" placeholder="Masukkan semula kata laluan baru">
+    </div>
+    <button onclick="resetPassword()"><i>🔐</i> Set Semula Kata Laluan</button>
+    <button class="btn-secondary mt-1" onclick="showForgotPassword()"><i>↩️</i> Kembali</button>
+    <div class="message" id="resetMsg"></div>
+</div>
+
+<!-- CHANGE PASSWORD PAGE -->
+<div class="container hidden" id="changePasswordPage">
+    <h2 class="page-title">Tukar Kata Laluan</h2>
+    <div class="form-group">
+        <label for="currentPassword">Kata Laluan Semasa</label>
+        <input type="password" id="currentPassword" placeholder="Masukkan kata laluan semasa">
+    </div>
+    <div class="form-group">
+        <label for="newPasswordAccount">Kata Laluan Baru</label>
+        <input type="password" id="newPasswordAccount" placeholder="Buat kata laluan baru" onkeyup="checkPasswordStrength(this.value, 'changePasswordStrength')">
+        <div id="changePasswordStrength" class="password-strength"></div>
+    </div>
+    <div class="form-group">
+        <label for="confirmNewPasswordAccount">Sahkan Kata Laluan Baru</label>
+        <input type="password" id="confirmNewPasswordAccount" placeholder="Masukkan semula kata laluan baru">
+    </div>
+    <button onclick="changePassword()"><i>🔐</i> Tukar Kata Laluan</button>
+    <button class="btn-secondary mt-1" onclick="backToAttendance()"><i>↩️</i> Kembali</button>
+    <div class="message" id="changePasswordMsg"></div>
+</div>
+
+<!-- ATTENDANCE PAGE -->
+<div class="container hidden" id="attendancePage">
+    <h2 class="page-title">Rekod Kehadiran</h2>
+    <p id="welcomeText" class="text-center mb-2"></p>
+    <p id="userTypeBadge" class="text-center mb-2"></p>
+    
+    <!-- Button Lihat Semua Pengguna -->
+    <button onclick="showAllUsers()" class="btn-secondary" style="margin-bottom: 15px;">
+        <i>📋</i> Lihat Senarai Semua Pengguna
+    </button>
+    
+    <!-- Location Information (hanya untuk guru) -->
+    <div class="location-container" id="locationContainer">
+        <h3 style="margin-bottom: 10px; color: var(--primary-color);">Pengesahan Lokasi</h3>
+        <div class="location-info">
+            <p><strong>Sekolah:</strong> <span id="schoolName"></span></p>
+            <p><strong>Lokasi Sekolah:</strong> <span id="schoolLocation"></span></p>
+            <p><strong>Status Lokasi:</strong> 
+                <span id="locationStatus" class="location-status checking">Mengesahkan...</span>
+            </p>
+            <p><strong>Koordinat Anda:</strong> <span id="userCoordinates">Mendapatkan lokasi...</span></p>
+            <p><strong>Jarak dari Sekolah:</strong> <span id="distanceFromSchool">Mengira...</span></p>
+        </div>
+        <button onclick="getLocation()" class="btn-secondary mt-1" style="padding: 8px 12px; font-size: 0.85rem;">
+            <i>📍</i> Dapatkan Lokasi Semula
+        </button>
+    </div>
+    
+    <!-- Attendance Buttons (hanya untuk guru) -->
+    <div class="attendance-status" id="attendanceButtons">
+        <div class="status-card hadir" onclick="markAttendance('HADIR')">
+            <i>✅</i> Tanda Hadir
+        </div>
+        <div class="status-card tidak-hadir" onclick="markAttendance('TIDAK HADIR')">
+            <i>❌</i> Tanda Tidak Hadir
+        </div>
+        <div class="status-card absent" onclick="showAbsentForm()">
+            <i>📄</i> Permohonan Ketidakhadiran
+        </div>
+    </div>
+    
+    <!-- For HQ Staff and School Admin -->
+    <div id="hqStaffOptions" class="hidden">
+        <div style="margin: 20px 0;">
+            <h3 style="color: var(--primary-color); margin-bottom: 10px;">Panel Pentadbiran</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="btn-success" onclick="showAttendanceReport()">
+                    <i>📊</i> Laporan Kehadiran
+                </button>
+                <button class="btn-primary" onclick="showUserManagement()">
+                    <i>👥</i> Pengurusan Pengguna
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="lateReasonContainer" class="hidden mt-2">
+        <div class="form-group">
+            <label for="registerLewat">Sebab Lewat</label>
+            <input type="text" id="registerLewat" placeholder="Sebab Lewat (contoh: trafik, mesyuarat, dll)">
+        </div>
+        <button onclick="submitLateReason()" class="btn-warning"><i>📤</i> Hantar Sebab</button>
+    </div>
+    
+    <div class="message" id="attendanceMsg"></div>
+</div>
+
+<!-- ABSENT FORM -->
+<div class="container hidden" id="absentForm">
+    <h2 class="page-title">Permohonan Ketidakhadiran</h2>
+    <div class="form-group">
+        <label for="reason">Sebab Ketidakhadiran</label>
+        <textarea id="reason" placeholder="Sila nyatakan sebab ketidakhadiran anda" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="document">Muat Naik Dokumen (JPEG/PNG)</label>
+        <input type="file" id="document" accept=".jpg,.jpeg,.png">
+    </div>
+    <button onclick="submitAbsent()" class="btn-warning"><i>📤</i> Hantar</button>
+    <button onclick="backToAttendance()" class="btn-secondary mt-1"><i>↩️</i> Kembali</button>
+    <div class="message" id="absentMsg"></div>
+</div>
+
+<!-- ACCOUNT PAGE -->
+<div class="container hidden" id="accountPage">
+    <h2 class="page-title">Profil Akaun</h2>
+    <img id="profilePic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-pic">
+    
+    <div class="form-group">
+        <label for="uploadPic">Tukar Gambar Profil</label>
+        <input type="file" id="uploadPic" accept="image/*" onchange="changeProfilePic()">
+    </div>
+    
+    <div class="form-group">
+        <label for="accountName">Nama</label>
+        <input type="text" id="accountName" disabled>
+    </div>
+    
+    <div class="form-group">
+        <label for="accountEmail">Emel</label>
+        <input type="text" id="accountEmail" disabled>
+    </div>
+    
+    <div class="form-group">
+        <label for="accountUsername">Username</label>
+        <input type="text" id="accountUsername" disabled>
+    </div>
+    
+    <div class="form-group">
+        <label for="accountUserType">Jenis Akaun</label>
+        <input type="text" id="accountUserType" disabled>
+    </div>
+    
+    <div class="form-group" id="accountSchoolGroup">
+        <label for="accountSchool">Sekolah</label>
+        <input type="text" id="accountSchool" disabled>
+    </div>
+    
+    <div class="form-group hidden" id="accountDepartmentGroup">
+        <label for="accountDepartment">Jabatan</label>
+        <input type="text" id="accountDepartment" disabled>
+    </div>
+    
+    <button onclick="backToAttendance()" class="btn-secondary"><i>↩️</i> Kembali</button>
+</div>
+
+<!-- HISTORY PAGE -->
+<div class="container hidden" id="historyPage">
+    <h2 class="page-title">Sejarah Kehadiran</h2>
+    
+    <div class="history-container">
+        <h3 class="history-title">Rekod Bulan Ini</h3>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Tarikh</th>
+                    <th>Status</th>
+                    <th>Masa</th>
+                    <th>Lokasi</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <!-- Data akan diisi secara dinamik -->
+            </tbody>
+        </table>
+    </div>
+    
+    <button onclick="backToAttendance()" class="btn-secondary mt-2"><i>↩️</i> Kembali</button>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="admin-container hidden" id="adminDashboard">
+    <!-- Navigation Bar -->
+    <nav class="navbar" id="adminNavbar">
+        <div class="navbar-content">
+            <h1>Waqt al-Madrasah - Dashboard Pentadbir</h1>
+            <div class="admin-info">
+                <span id="adminName">Pentadbir</span>
+                <span id="adminRole" style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; font-size: 0.9rem;"></span>
+                <button class="btn btn-secondary" onclick="logout()">Log Keluar</button>
+            </div>
+        </div>
+    </nav>
+
+    <div style="display: flex;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active" onclick="showAdminSection('dashboard')"><i>📊</i> Dashboard Utama</a></li>
+                <li><a href="#" onclick="showAdminSection('users')"><i>👥</i> Pengurusan Pengguna</a></li>
+                <li><a href="#" onclick="showAdminSection('teachers')"><i>👨‍🏫</i> Guru</a></li>
+                <li><a href="#" onclick="showAdminSection('reports')"><i>📋</i> Laporan Kehadiran</a></li>
+                <li><a href="#" onclick="showAdminSection('settings')"><i>⚙️</i> Tetapan Sistem</a></li>
+                <li><a href="#" onclick="showAdminSection('notifications')"><i>🔔</i> Notifikasi</a></li>
+                <li><a href="#" onclick="showAdminSection('analytics')"><i>📈</i> Analitik</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard-section">
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card total">
+                        <h3>Jumlah Pengguna</h3>
+                        <div class="stat-number" id="totalUsers">0</div>
+                        <p>Semua pengguna berdaftar</p>
+                    </div>
+                    <div class="stat-card hadir">
+                        <h3>Hadir Hari Ini</h3>
+                        <div class="stat-number" id="presentToday">0</div>
+                        <p id="attendanceRate">0% kehadiran</p>
+                    </div>
+                    <div class="stat-card lewat">
+                        <h3>Lewat Hari Ini</h3>
+                        <div class="stat-number" id="lateToday">0</div>
+                        <p id="lateRate">0% lewat</p>
+                    </div>
+                    <div class="stat-card tidak-hadir">
+                        <h3>Tidak Hadir</h3>
+                        <div class="stat-number" id="absentToday">0</div>
+                        <p id="absentRate">0% ketidakhadiran</p>
+                    </div>
+                </div>
+
+                <!-- User Type Statistics -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>Statistik Jenis Pengguna</h2>
+                    </div>
+                    <div style="padding: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                            <div style="text-align: center; padding: 1rem; background: rgba(40, 167, 69, 0.1); border-radius: 8px;">
+                                <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);" id="teacherCount">0</div>
+                                <div style="font-size: 0.9rem; color: #666;">Guru</div>
+                            </div>
+                            <div style="text-align: center; padding: 1rem; background: rgba(0, 123, 255, 0.1); border-radius: 8px;">
+                                <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);" id="adminCount">0</div>
+                                <div style="font-size: 0.9rem; color: #666;">Pentadbir</div>
+                            </div>
+                            <div style="text-align: center; padding: 1rem; background: rgba(108, 117, 125, 0.1); border-radius: 8px;">
+                                <div style="font-size: 2rem; font-weight: bold; color: var(--gray-color);" id="hqStaffCount">0</div>
+                                <div style="font-size: 0.9rem; color: #666;">Staff HQ</div>
+                            </div>
+                            <div style="text-align: center; padding: 1rem; background: rgba(255, 193, 7, 0.1); border-radius: 8px;">
+                                <div style="font-size: 2rem; font-weight: bold; color: var(--warning-color);" id="schoolAdminCount">0</div>
+                                <div style="font-size: 0.9rem; color: #666;">Admin Sekolah</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="dateFilter">Tarikh</label>
+                        <input type="date" id="dateFilter">
+                    </div>
+                    <div class="filter-group">
+                        <label for="schoolFilter">Sekolah</label>
+                        <select id="schoolFilter">
+                            <option value="">Semua Sekolah</option>
+                            <option value="Sekolah Agama Sungai Abong">Sekolah Agama Sungai Abong</option>
+                            <option value="Sekolah Rendah Arab Bersepadu">Sekolah Rendah Arab Bersepadu</option>
+                            <option value="Sekolah Agama Parit Keroma">Sekolah Agama Parit Keroma</option>
+                            <option value="Pejabat Pendidikan Islam Daerah Muar">Pejabat Pendidikan Islam Daerah Muar</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="userTypeFilter">Jenis Pengguna</label>
+                        <select id="userTypeFilter">
+                            <option value="">Semua Jenis</option>
+                            <option value="teacher">Guru</option>
+                            <option value="admin">Pentadbir</option>
+                            <option value="hq-staff">Staff HQ</option>
+                            <option value="school-admin">Admin Sekolah</option>
+                            <option value="observer">Pemerhati</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button class="btn btn-primary" onclick="loadAttendanceData()">Muat Semula Data</button>
+                        <button class="btn btn-success" onclick="exportReport()">Eksport Laporan Excel</button>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Sedang menghasilkan laporan Excel...</p>
+                </div>
+
+                <!-- Attendance Table -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>Rekod Kehadiran Hari Ini</h2>
+                        <span id="lastUpdate">Kemaskini Terakhir: -</span>
+                    </div>
+                    <table id="attendanceData">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Jenis Pengguna</th>
+                                <th>Sekolah/Jabatan</th>
+                                <th>Masa Kehadiran</th>
+                                <th>Status</th>
+                                <th>Lokasi</th>
+                                <th>Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTable">
+                            <!-- Data akan diisi secara dinamik -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Notifications Section -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>Notifikasi Terkini</h2>
+                        <span id="notificationCount">0 notifikasi belum dibaca</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Masa</th>
+                                <th>Pengguna</th>
+                                <th>Jenis</th>
+                                <th>Mesej</th>
+                                <th>Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="notificationsTable">
+                            <!-- Data akan diisi secara dinamik -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- User Management Section -->
+            <div id="users-section" class="hidden">
+                <div class="table-header">
+                    <h2>Pengurusan Pengguna</h2>
+                    <button class="btn btn-success" onclick="showAddUserModal()">Tambah Pengguna Baru</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Username</th>
+                                <th>Emel</th>
+                                <th>Jenis Akaun</th>
+                                <th>Sekolah/Jabatan</th>
+                                <th>Status</th>
+                                <th>Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <!-- Data pengguna akan diisi secara dinamik -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Teachers Management Section -->
+            <div id="teachers-section" class="hidden">
+                <div class="table-header">
+                    <h2>Pengurusan Guru</h2>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Username</th>
+                                <th>Emel</th>
+                                <th>Sekolah</th>
+                                <th>Kehadiran Bulan Ini</th>
+                                <th>Status</th>
+                                <th>Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teachersAdminTable">
+                            <!-- Data guru akan diisi secara dinamik -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="reports-section" class="hidden">
+                <div class="table-header">
+                    <h2>Laporan Kehadiran</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="generateMonthlyReport()">Laporan Bulanan</button>
+                        <button class="btn btn-success" onclick="generateSchoolReport()">Laporan Mengikut Sekolah</button>
+                        <button class="btn btn-warning" onclick="generateUserTypeReport()">Laporan Jenis Pengguna</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <div id="reportsContent">
+                        <p>Pilih jenis laporan untuk dipaparkan</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings-section" class="hidden">
+                <div class="table-header">
+                    <h2>Tetapan Sistem</h2>
+                </div>
+                <div class="table-container">
+                    <div style="padding: 2rem;">
+                        <div class="filter-group">
+                            <label for="schoolTime">Masa Mulai Sekolah</label>
+                            <input type="time" id="schoolTime" value="07:30">
+                        </div>
+                        <div class="filter-group">
+                            <label for="lateThreshold">Ambang Lewat (minit)</label>
+                            <input type="number" id="lateThreshold" value="15" min="1" max="60">
+                        </div>
+                        <div class="filter-group">
+                            <label for="locationRadius">Radius Lokasi Sekolah (meter)</label>
+                            <input type="number" id="locationRadius" value="500" min="100" max="5000">
+                        </div>
+                        <div class="filter-group">
+                            <label for="notificationEmail">Emel Notifikasi</label>
+                            <input type="email" id="notificationEmail" value="admin@sekolah.edu">
+                        </div>
+                        <div class="filter-group">
+                            <label for="autoReminder">Hantar Peringatan Automatik</label>
+                            <select id="autoReminder">
+                                <option value="yes">Ya</option>
+                                <option value="no">Tidak</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-success" onclick="saveSettings()">Simpan Tetapan</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div id="notifications-section" class="hidden">
+                <div class="table-header">
+                    <h2>Pengurusan Notifikasi</h2>
+                    <button class="btn btn-primary" onclick="markAllAsRead()">Tandai Semua Sudah Dibaca</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Masa</th>
+                                <th>Pengguna</th>
+                                <th>Jenis</th>
+                                <th>Mesej</th>
+                                <th>Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allNotificationsTable">
+                            <!-- Semua notifikasi akan diisi di sini -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analytics-section" class="hidden">
+                <div class="table-header">
+                    <h2>Analitik Sistem</h2>
+                </div>
+                <div class="table-container">
+                    <div style="padding: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">Statistik Penggunaan</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                            <div>
+                                <h4>Log Masuk Minggu Ini</h4>
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                                    <div id="loginChart"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4>Pengguna Aktif</h4>
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                                    <div id="activeUsersChart"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 2rem;">
+                            <h4>Statistik Jenis Pengguna</h4>
+                            <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                                <div id="userTypeChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- MODALS -->
+<div id="teacherModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Butiran Pengguna</h2>
+            <span class="close" onclick="closeModal('teacherModal')">&times;</span>
+        </div>
+        <div id="teacherModalContent">
+            <!-- Kandungan modal akan diisi secara dinamik -->
+        </div>
+    </div>
+</div>
+
+<div id="notificationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Butiran Notifikasi</h2>
+            <span class="close" onclick="closeModal('notificationModal')">&times;</span>
+        </div>
+        <div id="notificationModalContent">
+            <!-- Kandungan modal akan diisi secara dinamik -->
+        </div>
+    </div>
+</div>
+
+<div id="addUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Tambah Pengguna Baru</h2>
+            <span class="close" onclick="closeModal('addUserModal')">&times;</span>
+        </div>
+        <div>
+            <div class="filter-group">
+                <label for="newUserName">Nama Penuh</label>
+                <input type="text" id="newUserName" placeholder="Masukkan nama penuh">
+            </div>
+            <div class="filter-group">
+                <label for="newUserEmail">Emel</label>
+                <input type="email" id="newUserEmail" placeholder="Masukkan emel">
+            </div>
+            <div class="filter-group">
+                <label for="newUserUsername">Username</label>
+                <input type="text" id="newUserUsername" placeholder="Masukkan username">
+            </div>
+            <div class="filter-group">
+                <label for="newUserType">Jenis Akaun</label>
+                <select id="newUserType" onchange="toggleNewUserFields()">
+                    <option value="teacher">Guru</option>
+                    <option value="admin">Pentadbir</option>
+                    <option value="hq-staff">Staff HQ</option>
+                    <option value="school-admin">Admin Sekolah</option>
+                    <option value="observer">Pemerhati</option>
+                </select>
+            </div>
+            <div class="filter-group" id="newUserSchoolGroup">
+                <label for="newUserSchool">Sekolah</label>
+                <select id="newUserSchool">
+                    <option value="Sekolah Agama Sungai Abong">Sekolah Agama Sungai Abong</option>
+                    <option value="Sekolah Rendah Arab Bersepadu">Sekolah Rendah Arab Bersepadu</option>
+                    <option value="Sekolah Agama Parit Keroma">Sekolah Agama Parit Keroma</option>
+                    <option value="Pejabat Pendidikan Islam Daerah Muar">Pejabat Pendidikan Islam Daerah Muar</option>
+                </select>
+            </div>
+            <div class="filter-group hidden" id="newUserDepartmentGroup">
+                <label for="newUserDepartment">Jabatan</label>
+                <select id="newUserDepartment">
+                    <option value="Jabatan Sumber Manusia">Jabatan Sumber Manusia</option>
+                    <option value="Jabatan Kewangan">Jabatan Kewangan</option>
+                    <option value="Jabatan Akademik">Jabatan Akademik</option>
+                    <option value="Jabatan Pentadbiran">Jabatan Pentadbiran</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="newUserPassword">Kata Laluan Sementara</label>
+                <input type="text" id="newUserPassword" value="default123" readonly>
+                <small>Pengguna perlu menukar kata laluan selepas log masuk pertama</small>
+            </div>
+            <button class="btn btn-success" onclick="addNewUser()">Tambah Pengguna</button>
+        </div>
+    </div>
+</div>
+
+<div id="editUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Maklumat Pengguna</h2>
+            <span class="close" onclick="closeModal('editUserModal')">&times;</span>
+        </div>
+        <div id="editUserContent">
+            <!-- Kandungan akan diisi secara dinamik -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Data storage
+let users = JSON.parse(localStorage.getItem('users')) || [];
+let currentUser = null;
+let isLate = false;
+let attendanceHistory = JSON.parse(localStorage.getItem('attendanceHistory')) || {};
+let userLocation = null;
+let locationVerified = false;
+let resetCodes = JSON.parse(localStorage.getItem('resetCodes')) || {};
+let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
+let systemSettings = JSON.parse(localStorage.getItem('systemSettings')) || {};
+
+// KOORDINAT SEBENAR SEKOLAH-SEKOLAH DI MUAR, JOHOR
+const schoolCoordinates = {
+    "Sekolah Agama Sungai Abong": { 
+        lat: 2.0576, 
+        lng: 102.5721,
+        address: "Jalan Salleh, Kampung Sungai Abong, 84000 Muar, Johor"
+    },
+    "Sekolah Rendah Arab Bersepadu": { 
+        lat: 2.0462, 
+        lng: 102.5618,
+        address: "Jalan Abdul Rahman, Bandar Maharani, 84000 Muar, Johor" 
+    },
+    "Sekolah Agama Parit Keroma": { 
+        lat: 2.1196, 
+        lng: 102.6153,
+        address: "Parit Keroma, 84000 Muar, Johor"
+    },
+    "Pejabat Pendidikan Islam Daerah Muar": { 
+        lat: 2.0586724019084413, 
+        lng: 102.59476809631569,
+        address: "48, Jalan Rozy 2, Taman Rozy, 84000 Muar, Johor Darul Ta'zim"
+    }
+};
+
+// User Type Display Names
+const userTypeNames = {
+    'teacher': 'Guru',
+    'admin': 'Pentadbir',
+    'hq-staff': 'Staff HQ',
+    'school-admin': 'Admin Sekolah',
+    'observer': 'Pemerhati'
+};
+
+// User Type Colors
+const userTypeColors = {
+    'teacher': 'success',
+    'admin': 'primary',
+    'hq-staff': 'gray',
+    'school-admin': 'warning',
+    'observer': 'info'
+};
+
+// Initialize with sample data if empty
+if (users.length === 0) {
+    users = [
+        {
+            email: "admin@sekolah.edu",
+            username: "admin",
+            password: "admin123",
+            name: "Pentadbir Utama",
+            type: "admin",
+            pic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        },
+        {
+            email: "guru1@sekolah.edu",
+            username: "guru1",
+            password: "guru123",
+            name: "Ahmad bin Ismail",
+            type: "teacher",
+            school: "Sekolah Agama Sungai Abong",
+            pic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        },
+        {
+            email: "guru2@sekolah.edu",
+            username: "guru2",
+            password: "guru123",
+            name: "Siti Nor Aishah",
+            type: "teacher",
+            school: "Sekolah Rendah Arab Bersepadu",
+            pic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        },
+        {
+            email: "staff@ppdmuar.edu",
+            username: "staff1",
+            password: "staff123",
+            name: "Mohd Rahim",
+            type: "hq-staff",
+            department: "Jabatan Akademik",
+            pic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        },
+        {
+            email: "admin@sekolahabong.edu",
+            username: "adminsekolah",
+            password: "admin123",
+            name: "Nor Azizah",
+            type: "school-admin",
+            school: "Sekolah Agama Sungai Abong",
+            pic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        }
+    ];
+    localStorage.setItem('users', JSON.stringify(users));
+}
+
+if (Object.keys(attendanceHistory).length === 0) {
+    attendanceHistory = {
+        "guru1": [
+            {
+                date: new Date().toLocaleDateString('ms-MY'),
+                time: "07:15 AM",
+                status: "HADIR",
+                location: "📍 Disahkan"
+            }
+        ],
+        "guru2": [
+            {
+                date: new Date().toLocaleDateString('ms-MY'),
+                time: "08:05 AM",
+                status: "LEWAT",
+                location: "📍 Disahkan",
+                notes: "Kesesakan lalu lintas"
+            }
+        ]
+    };
+    localStorage.setItem('attendanceHistory', JSON.stringify(attendanceHistory));
+}
+
+// Sample notifications data
+const sampleNotifications = [
+    { id: 1, time: "08:05 AM", user: "Siti Nor Aishah", type: "⚠️ Lewat", message: "Guru lewat 20 minit - sebab: kesesakan lalu lintas", read: false },
+    { id: 2, time: "07:45 AM", user: "Mohd Ali Hassan", type: "❌ Tidak Hadir", message: "Permohonan cuti sakit dengan lampiran", read: false }
+];
+
+// Initialize the app
+function init() {
+    // Check if there's a logged in user
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        if (currentUser.type === 'admin') {
+            showAdminDashboard();
+        } else {
+            showAttendancePage();
+        }
+    } else {
+        showLogin();
+    }
+}
+
+// Page Navigation Functions
+function showLogin() {
+    hideAllPages();
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('navbar').classList.add('hidden');
+    document.getElementById('mainBody').className = 'login-body';
+    clearMessages();
+}
+
+function showRegister() {
+    hideAllPages();
+    document.getElementById('registerPage').classList.remove('hidden');
+    document.getElementById('mainBody').className = 'login-body';
+    clearMessages();
+}
+
+function showForgotPassword() {
+    hideAllPages();
+    document.getElementById('forgotPasswordPage').classList.remove('hidden');
+    document.getElementById('mainBody').className = 'login-body';
+    clearMessages();
+}
+
+function showResetPassword() {
+    hideAllPages();
+    document.getElementById('resetPasswordPage').classList.remove('hidden');
+    document.getElementById('mainBody').className = 'login-body';
+    clearMessages();
+}
+
+function showChangePassword() {
+    document.getElementById('attendancePage').classList.add('hidden');
+    document.getElementById('changePasswordPage').classList.remove('hidden');
+    document.getElementById('dropdownMenu').style.display = "none";
+    clearMessages();
+}
+
+// Show attendance page based on user type
+function showAttendancePage() {
+    hideAllPages();
+    document.getElementById('attendancePage').classList.remove('hidden');
+    document.getElementById('navbar').classList.remove('hidden');
+    
+    document.getElementById('userName').innerText = currentUser.name;
+    document.getElementById('profilePicSmall').src = currentUser.pic;
+    document.getElementById('welcomeText').innerHTML = 
+        `Selamat datang, <strong>${currentUser.name}</strong>`;
+    
+    // Show user type badge
+    const userTypeBadge = document.getElementById('userTypeBadge');
+    const badgeText = userTypeNames[currentUser.type] || currentUser.type;
+    const badgeColor = userTypeColors[currentUser.type] || 'primary';
+    userTypeBadge.innerHTML = `<span style="background: var(--${badgeColor}-color); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">${badgeText}</span>`;
+    
+    // Show/hide elements based on user type
+    if (currentUser.type === 'teacher') {
+        document.getElementById('locationContainer').classList.remove('hidden');
+        document.getElementById('attendanceButtons').classList.remove('hidden');
+        document.getElementById('hqStaffOptions').classList.add('hidden');
+        
+        // Update school information dengan koordinat sebenar
+        const schoolInfo = schoolCoordinates[currentUser.school];
+        document.getElementById('schoolName').innerText = currentUser.school;
+        document.getElementById('schoolLocation').innerText = schoolInfo ? schoolInfo.address : "Lokasi tidak diketahui";
+        
+        // Get user location
+        getLocation();
+    } else if (currentUser.type === 'hq-staff' || currentUser.type === 'school-admin') {
+        document.getElementById('locationContainer').classList.add('hidden');
+        document.getElementById('attendanceButtons').classList.add('hidden');
+        document.getElementById('hqStaffOptions').classList.remove('hidden');
+        
+        // Show school info for school-admin
+        if (currentUser.type === 'school-admin' && currentUser.school) {
+            const schoolInfo = schoolCoordinates[currentUser.school];
+            document.getElementById('hqStaffOptions').innerHTML += `
+                <div class="location-container">
+                    <h3 style="margin-bottom: 10px; color: var(--primary-color);">Maklumat Sekolah</h3>
+                    <div class="location-info">
+                        <p><strong>Sekolah:</strong> ${currentUser.school}</p>
+                        <p><strong>Lokasi:</strong> ${schoolInfo ? schoolInfo.address : "Lokasi tidak diketahui"}</p>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        document.getElementById('locationContainer').classList.add('hidden');
+        document.getElementById('attendanceButtons').classList.add('hidden');
+        document.getElementById('hqStaffOptions').classList.add('hidden');
+    }
+    
+    clearMessages();
+}
+
+function showAdminDashboard() {
+    hideAllPages();
+    document.getElementById('adminDashboard').classList.remove('hidden');
+    document.getElementById('adminNavbar').style.display = 'block';
+    document.getElementById('adminName').textContent = currentUser.name;
+    document.getElementById('adminRole').textContent = userTypeNames[currentUser.type] || currentUser.type;
+    document.getElementById('mainBody').className = 'admin-body';
+    
+    // Set today's date as default
+    document.getElementById('dateFilter').valueAsDate = new Date();
+    loadDashboardData();
+    loadNotifications();
+    loadUsers();
+    startRealTimeUpdates();
+}
+
+function hideAllPages() {
+    const pages = ['loginPage', 'registerPage', 'forgotPasswordPage', 'resetPasswordPage', 
+                   'changePasswordPage', 'attendancePage', 'accountPage', 'historyPage', 
+                   'absentForm', 'teacherDashboard', 'adminDashboard'];
+    pages.forEach(page => {
+        if (document.getElementById(page)) {
+            document.getElementById(page).classList.add('hidden');
+        }
+    });
+    document.getElementById('adminNavbar').style.display = 'none';
+    document.getElementById('navbar').classList.add('hidden');
+}
+
+// Toggle school field based on user type in registration
+function toggleSchoolField() {
+    const userType = document.getElementById('registerUserType').value;
+    const schoolField = document.getElementById('schoolFieldGroup');
+    const departmentField = document.getElementById('departmentFieldGroup');
+    
+    if (userType === 'teacher' || userType === 'school-admin') {
+        schoolField.classList.remove('hidden');
+        departmentField.classList.add('hidden');
+    } else if (userType === 'hq-staff') {
+        schoolField.classList.add('hidden');
+        departmentField.classList.remove('hidden');
+    } else {
+        schoolField.classList.add('hidden');
+        departmentField.classList.add('hidden');
+    }
+}
+
+// Toggle fields for new user modal
+function toggleNewUserFields() {
+    const userType = document.getElementById('newUserType').value;
+    const schoolGroup = document.getElementById('newUserSchoolGroup');
+    const departmentGroup = document.getElementById('newUserDepartmentGroup');
+    
+    if (userType === 'teacher' || userType === 'school-admin') {
+        schoolGroup.classList.remove('hidden');
+        departmentGroup.classList.add('hidden');
+    } else if (userType === 'hq-staff') {
+        schoolGroup.classList.add('hidden');
+        departmentGroup.classList.remove('hidden');
+    } else {
+        schoolGroup.classList.add('hidden');
+        departmentGroup.classList.add('hidden');
+    }
+}
+
+// Clear all message displays
+function clearMessages() {
+    const messages = document.querySelectorAll('.message');
+    messages.forEach(msg => {
+        msg.textContent = '';
+        msg.className = 'message';
+    });
+}
+
+// Show message
+function showMessage(elementId, message, type = 'info') {
+    const element = document.getElementById(elementId);
+    element.textContent = message;
+    element.className = `message ${type}`;
+}
+
+// Check password strength
+function checkPasswordStrength(password, elementId = 'passwordStrength') {
+    const strengthBar = document.getElementById(elementId);
+    if (!password) {
+        strengthBar.className = 'password-strength';
+        return;
+    }
+    
+    let strength = 0;
+    if (password.length >= 6) strength += 1;
+    if (password.match(/[a-z]+/)) strength += 1;
+    if (password.match(/[A-Z]+/)) strength += 1;
+    if (password.match(/[0-9]+/)) strength += 1;
+    if (password.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/)) strength += 1;
+    
+    if (strength < 2) {
+        strengthBar.className = 'password-strength weak';
+    } else if (strength < 4) {
+        strengthBar.className = 'password-strength medium';
+    } else {
+        strengthBar.className = 'password-strength strong';
+    }
+}
+
+// Register new user
+function register() {
+    const name = document.getElementById('registerName').value;
+    const email = document.getElementById('registerEmail').value;
+    const username = document.getElementById('registerUsername').value;
+    const userType = document.getElementById('registerUserType').value;
+    const school = document.getElementById('registerSchool').value;
+    const department = document.getElementById('registerDepartment').value;
+    const pass = document.getElementById('registerPassword').value;
+    const confirm = document.getElementById('registerConfirm').value;
+    
+    // Validation
+    if (!name || !email || !username || !userType || !pass || !confirm) {
+        return alert("Sila isi semua maklumat yang diperlukan.");
+    }
+    
+    // Additional validation based on user type
+    if ((userType === 'teacher' || userType === 'school-admin') && !school) {
+        return alert("Sila pilih sekolah.");
+    }
+    
+    if (userType === 'hq-staff' && !department) {
+        return alert("Sila pilih jabatan.");
+    }
+    
+    if (pass !== confirm) {
+        return alert("Kata laluan tidak sepadan.");
+    }
+    
+    if (pass.length < 6) {
+        return alert("Kata laluan mesti sekurang-kurangnya 6 aksara.");
+    }
+    
+    // Check if username already exists
+    if (users.find(u => u.username === username)) {
+        return alert("Username ini sudah digunakan. Sila pilih username lain.");
+    }
+    
+    // Check if email already exists
+    if (users.find(u => u.email === email)) {
+        return alert("Emel ini sudah didaftarkan.");
+    }
+    
+    // Create new user
+    const newUser = { 
+        name, 
+        email,
+        username,
+        type: userType,
+        password: pass,
+        pic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+    };
+    
+    // Add additional fields based on user type
+    if (userType === 'teacher' || userType === 'school-admin') {
+        newUser.school = school;
+    } else if (userType === 'hq-staff') {
+        newUser.department = department;
+    }
+    
+    users.push(newUser);
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    alert("Pendaftaran berjaya! Sila log masuk.");
+    showLogin();
+}
+
+// Login user
+function login() {
+    const identifier = document.getElementById('loginUsername').value;
+    const pass = document.getElementById('loginPassword').value;
+    const selectedUserType = document.getElementById('userType').value;
+    
+    const user = users.find(u => 
+        (u.username === identifier || u.email === identifier) && 
+        u.password === pass
+    );
+    
+    if (!user) {
+        alert("Username/emel atau kata laluan salah.");
+        return;
+    }
+    
+    // Check user type
+    if (selectedUserType !== user.type) {
+        alert(`Jenis pengguna tidak sepadan. Anda adalah ${userTypeNames[user.type]}.`);
+        return;
+    }
+    
+    currentUser = user;
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    
+    if (user.type === 'admin') {
+        showAdminDashboard();
+    } else {
+        showAttendancePage();
+    }
+}
+
+// Send reset code for forgotten password
+function sendResetCode() {
+    const email = document.getElementById('forgotEmail').value;
+    const user = users.find(u => u.email === email);
+
+    if (!user) {
+        showMessage('forgotMsg', 'Emel tidak ditemui dalam sistem', 'error');
+        return;
+    }
+
+    // Generate simple reset code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    resetCodes[email] = {
+        code: resetCode,
+        expires: Date.now() + 15 * 60 * 1000 // 15 minutes
+    };
+    localStorage.setItem('resetCodes', JSON.stringify(resetCodes));
+
+    // For demo purposes, show the code in alert
+    alert(`Kod reset untuk ${email}: ${resetCode}\n\n(Kod ini akan dihantar melalui emel dalam sistem sebenar)`);
+    
+    showMessage('forgotMsg', `Kod reset telah dihantar ke ${email}`, 'success');
+    setTimeout(() => {
+        showResetPassword();
+    }, 2000);
+}
+
+// Reset password with code
+function resetPassword() {
+    const code = document.getElementById('resetCode').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmNewPassword').value;
+    const email = document.getElementById('forgotEmail').value;
+
+    if (!code || !newPassword || !confirmPassword) {
+        showMessage('resetMsg', 'Sila isi semua maklumat', 'error');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showMessage('resetMsg', 'Kata laluan tidak sepadan', 'error');
+        return;
+    }
+
+    const resetInfo = resetCodes[email];
+    if (!resetInfo || resetInfo.code !== code) {
+        showMessage('resetMsg', 'Kod reset tidak sah', 'error');
+        return;
+    }
+
+    if (Date.now() > resetInfo.expires) {
+        showMessage('resetMsg', 'Kod reset telah tamat tempoh', 'error');
+        return;
+    }
+
+    // Update password
+    const userIndex = users.findIndex(u => u.email === email);
+    if (userIndex !== -1) {
+        users[userIndex].password = newPassword;
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        delete resetCodes[email];
+        localStorage.setItem('resetCodes', JSON.stringify(resetCodes));
+        
+        showMessage('resetMsg', 'Kata laluan berjaya ditetapkan semula', 'success');
+        setTimeout(() => {
+            showLogin();
+        }, 2000);
+    }
+}
+
+// Change password from account
+function changePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPasswordAccount').value;
+    const confirmPassword = document.getElementById('confirmNewPasswordAccount').value;
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        return showMessage('changePasswordMsg', 'Sila isi semua maklumat', 'error');
+    }
+    
+    if (currentUser.password !== currentPassword) {
+        return showMessage('changePasswordMsg', 'Kata laluan semasa tidak betul', 'error');
+    }
+    
+    if (newPassword !== confirmPassword) {
+        return showMessage('changePasswordMsg', 'Kata laluan baru tidak sepadan', 'error');
+    }
+    
+    if (newPassword.length < 6) {
+        return showMessage('changePasswordMsg', 'Kata laluan mesti sekurang-kurangnya 6 aksara', 'error');
+    }
+    
+    // Update user password
+    const userIndex = users.findIndex(u => u.username === currentUser.username);
+    if (userIndex !== -1) {
+        users[userIndex].password = newPassword;
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        // Update current user
+        currentUser.password = newPassword;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        showMessage('changePasswordMsg', 'Kata laluan berjaya ditukar', 'success');
+        
+        // Clear form
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPasswordAccount').value = '';
+        document.getElementById('confirmNewPasswordAccount').value = '';
+        
+        setTimeout(() => {
+            backToAttendance();
+        }, 2000);
+    }
+}
+
+// Get user's current location
+function getLocation() {
+    const statusElement = document.getElementById('locationStatus');
+    const coordinatesElement = document.getElementById('userCoordinates');
+    const distanceElement = document.getElementById('distanceFromSchool');
+    
+    statusElement.textContent = "Mendapatkan lokasi...";
+    statusElement.className = "location-status checking";
+    coordinatesElement.textContent = "Mendapatkan lokasi...";
+    distanceElement.textContent = "Mengira...";
+    
+    if (!navigator.geolocation) {
+        statusElement.textContent = "Geolokasi tidak disokong";
+        statusElement.className = "location-status not-verified";
+        coordinatesElement.textContent = "Tidak tersedia";
+        distanceElement.textContent = "Tidak dapat dikira";
+        return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            userLocation = { lat, lng };
+            coordinatesElement.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            
+            // Verify location against school coordinates
+            verifyLocation(lat, lng);
+        },
+        function(error) {
+            console.error("Error getting location:", error);
+            statusElement.textContent = "Gagal mendapatkan lokasi";
+            statusElement.className = "location-status not-verified";
+            coordinatesElement.textContent = "Gagal mendapatkan lokasi";
+            distanceElement.textContent = "Tidak dapat dikira";
+            
+            let errorMessage = "Gagal mendapatkan lokasi: ";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage += "Akses lokasi ditolak. Sila benarkan akses lokasi dalam tetapan pelayar anda.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage += "Maklumat lokasi tidak tersedia.";
+                    break;
+                case error.TIMEOUT:
+                    errorMessage += "Permintaan lokasi tamat masa.";
+                    break;
+                default:
+                    errorMessage += "Ralat tidak diketahui.";
+                    break;
+            }
+            
+            showMessage('attendanceMsg', errorMessage, 'error');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 60000
+        }
+    );
+}
+
+// Verify if user is at school location
+function verifyLocation(userLat, userLng) {
+    const statusElement = document.getElementById('locationStatus');
+    const distanceElement = document.getElementById('distanceFromSchool');
+    
+    const schoolCoord = schoolCoordinates[currentUser.school];
+    
+    if (!schoolCoord) {
+        statusElement.textContent = "Lokasi sekolah tidak ditakrif";
+        statusElement.className = "location-status not-verified";
+        distanceElement.textContent = "Tidak dapat dikira";
+        locationVerified = false;
+        return;
+    }
+    
+    // Calculate distance between user and school (in meters)
+    const distance = calculateDistance(
+        userLat, userLng, 
+        schoolCoord.lat, schoolCoord.lng
+    );
+    
+    const distanceInMeters = distance * 1000; // Convert to meters
+    distanceElement.textContent = `${distanceInMeters.toFixed(0)} meter`;
+    
+    // Get radius from settings or use default
+    const radius = systemSettings.locationRadius || 500; // meters
+    
+    // Check if user is within radius of school
+    if (distanceInMeters <= radius) {
+        statusElement.textContent = "Lokasi Disahkan - Anda berada di sekolah";
+        statusElement.className = "location-status verified";
+        locationVerified = true;
+        
+        showMessage('attendanceMsg', 
+            `✅ Lokasi disahkan! Anda berada ${distanceInMeters.toFixed(0)} meter dari sekolah.`, 
+            'success');
+    } else {
+        statusElement.textContent = "Lokasi Tidak Disahkan - Anda tidak berada di sekolah";
+        statusElement.className = "location-status not-verified";
+        locationVerified = false;
+        
+        showMessage('attendanceMsg', 
+            `❌ Anda berada ${distanceInMeters.toFixed(0)} meter dari sekolah. Sila pastikan anda berada di lokasi sekolah untuk menandakan kehadiran.`, 
+            'error');
+    }
+}
+
+// Calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2); 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const distance = R * c; // Distance in km
+    return distance;
+}
+
+function deg2rad(deg) {
+    return deg * (Math.PI/180);
+}
+
+// Mark attendance (only for teachers)
+function markAttendance(status) {
+    if (currentUser.type !== 'teacher') {
+        return alert("Fungsi ini hanya untuk guru.");
+    }
+    
+    // Check location verification for "HADIR" status
+    if (status === 'HADIR' && !locationVerified) {
+        return showMessage('attendanceMsg', 
+            '❌ Anda tidak berada di lokasi sekolah. Sila dapatkan lokasi semula atau hubungi pentadbir jika ini adalah ralat.', 
+            'error');
+    }
+    
+    const msg = document.getElementById('attendanceMsg');
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
+    isLate = h > 13 || (h === 13 && m > 45);
+    const timeString = now.toLocaleString('ms-MY');
+    
+    // Save to history
+    if (!attendanceHistory[currentUser.username]) {
+        attendanceHistory[currentUser.username] = [];
+    }
+    
+    const record = {
+        date: now.toLocaleDateString('ms-MY'),
+        time: now.toLocaleTimeString('ms-MY'),
+        status: status,
+        isLate: isLate,
+        location: userLocation ? {
+            lat: userLocation.lat,
+            lng: userLocation.lng,
+            verified: locationVerified,
+            distance: calculateDistance(userLocation.lat, userLocation.lng, 
+                schoolCoordinates[currentUser.school].lat, schoolCoordinates[currentUser.school].lng) * 1000
+        } : null
+    };
+    
+    attendanceHistory[currentUser.username].push(record);
+    localStorage.setItem('attendanceHistory', JSON.stringify(attendanceHistory));
+    
+    if (status === 'HADIR') {
+        if (isLate) {
+            showMessage('attendanceMsg', `⏰ Status kehadiran: LEWAT (${timeString}) - Lokasi Disahkan`, 'warning');
+            document.getElementById('lateReasonContainer').classList.remove('hidden');
+        } else {
+            showMessage('attendanceMsg', `✅ Status kehadiran: HADIR TEPAT WAKTU (${timeString}) - Lokasi Disahkan`, 'success');
+            document.getElementById('lateReasonContainer').classList.add('hidden');
+        }
+    } else {
+        showMessage('attendanceMsg', `ℹ️ Status kehadiran: ${status} (${timeString})`, 'info');
+        document.getElementById('lateReasonContainer').classList.add('hidden');
+    }
+}
+
+// Submit late reason
+function submitLateReason() {
+    const reason = document.getElementById('registerLewat').value;
+    if (!reason.trim()) {
+        return alert("Sila nyatakan sebab kelewatan.");
+    }
+    
+    alert("Sebab lewat dihantar: " + reason);
+    document.getElementById('lateReasonContainer').classList.add('hidden');
+    document.getElementById('registerLewat').value = "";
+}
+
+// Toggle dropdown menu
+function toggleMenu() {
+    const menu = document.getElementById('dropdownMenu');
+    menu.style.display = menu.style.display === "flex" ? "none" : "flex";
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('dropdownMenu');
+    const profile = document.querySelector('.profile-info');
+    
+    if (dropdown.style.display === "flex" && !profile.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.style.display = "none";
+    }
+});
+
+// Open account page
+function openAccount() {
+    document.getElementById('attendancePage').classList.add('hidden');
+    document.getElementById('accountPage').classList.remove('hidden');
+    document.getElementById('profilePic').src = currentUser.pic;
+    document.getElementById('accountName').value = currentUser.name;
+    document.getElementById('accountEmail').value = currentUser.email;
+    document.getElementById('accountUsername').value = currentUser.username;
+    document.getElementById('accountUserType').value = userTypeNames[currentUser.type] || currentUser.type;
+    
+    // Show/hide fields based on user type
+    if (currentUser.school) {
+        document.getElementById('accountSchoolGroup').classList.remove('hidden');
+        document.getElementById('accountSchool').value = currentUser.school;
+    } else {
+        document.getElementById('accountSchoolGroup').classList.add('hidden');
+    }
+    
+    if (currentUser.department) {
+        document.getElementById('accountDepartmentGroup').classList.remove('hidden');
+        document.getElementById('accountDepartment').value = currentUser.department;
+    } else {
+        document.getElementById('accountDepartmentGroup').classList.add('hidden');
+    }
+    
+    document.getElementById('dropdownMenu').style.display = "none";
+}
+
+// Change profile picture
+function changeProfilePic() {
+    const file = document.getElementById('uploadPic').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentUser.pic = e.target.result;
+            document.getElementById('profilePic').src = e.target.result;
+            document.getElementById('profilePicSmall').src = e.target.result;
+            
+            // Update in users array
+            const userIndex = users.findIndex(u => u.username === currentUser.username);
+            if (userIndex !== -1) {
+                users[userIndex].pic = e.target.result;
+                localStorage.setItem('users', JSON.stringify(users));
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            }
+            
+            alert("Gambar profil berjaya dikemas kini!");
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+// Show absent form
+function showAbsentForm() {
+    document.getElementById('attendancePage').classList.add('hidden');
+    document.getElementById('absentForm').classList.remove('hidden');
+    clearMessages();
+}
+
+// Submit absent form
+function submitAbsent() {
+    const reason = document.getElementById('reason').value;
+    const file = document.getElementById('document').files[0];
+    
+    if (!reason || !file) {
+        return alert("Sila isi sebab dan muat naik dokumen.");
+    }
+    
+    showMessage('absentMsg', "Permohonan ketidakhadiran dihantar pada " + new Date().toLocaleString('ms-MY'), 'success');
+    
+    // Reset form
+    document.getElementById('reason').value = '';
+    document.getElementById('document').value = '';
+}
+
+// Show history page
+function showHistory() {
+    document.getElementById('attendancePage').classList.add('hidden');
+    document.getElementById('historyPage').classList.remove('hidden');
+    
+    // Populate history table
+    const tableBody = document.getElementById('historyTableBody');
+    tableBody.innerHTML = '';
+    
+    if (attendanceHistory[currentUser.username]) {
+        const userHistory = attendanceHistory[currentUser.username];
+        
+        // Show only last 10 records
+        const recentHistory = userHistory.slice(-10).reverse();
+        
+        recentHistory.forEach(record => {
+            const row = document.createElement('tr');
+            
+            const statusClass = record.status === 'HADIR' ? 
+                (record.isLate ? 'warning' : 'success') : 'info';
+            
+            let locationStatus = 'Tiada Data';
+            if (record.location) {
+                locationStatus = record.location.verified ? 
+                    `Lokasi Disahkan (${record.location.distance.toFixed(0)}m)` : 
+                    'Lokasi Tidak Disahkan';
+            }
+            
+            row.innerHTML = `
+                <td>${record.date}</td>
+                <td><span class="message ${statusClass}" style="display:inline-block;padding:2px 8px;font-size:0.8rem;">
+                    ${record.status}${record.isLate ? ' (LEWAT)' : ''}
+                </span></td>
+                <td>${record.time}</td>
+                <td>${locationStatus}</td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+    } else {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Tiada rekod kehadiran</td></tr>';
+    }
+    
+    document.getElementById('dropdownMenu').style.display = "none";
+}
+
+// Show all users
+function showAllUsers() {
+    let message = "=== SENARAI SEMUA PENGGUNA ===\n\n";
+    
+    if (users.length === 0) {
+        message += "❌ Tiada pengguna yang didaftarkan\n";
+    } else {
+        users.forEach((user, index) => {
+            const userType = userTypeNames[user.type] || user.type;
+            message += `👤 ${index + 1}. ${user.name}\n`;
+            message += `   Jenis: ${userType}\n`;
+            message += `   Username: @${user.username}\n`;
+            message += `   Emel: ${user.email}\n`;
+            if (user.school) message += `   Sekolah: ${user.school}\n`;
+            if (user.department) message += `   Jabatan: ${user.department}\n`;
+            message += `   -------------------\n`;
+        });
+        
+        message += `\n📊 TOTAL: ${users.length} orang pengguna`;
+    }
+    
+    alert(message);
+}
+
+// Back to attendance page
+function backToAttendance() {
+    document.getElementById('absentForm').classList.add('hidden');
+    document.getElementById('accountPage').classList.add('hidden');
+    document.getElementById('historyPage').classList.add('hidden');
+    document.getElementById('changePasswordPage').classList.add('hidden');
+    document.getElementById('attendancePage').classList.remove('hidden');
+    clearMessages();
+}
+
+// ADMIN DASHBOARD FUNCTIONS
+
+// Load dashboard data
+function loadDashboardData() {
+    const selectedDate = document.getElementById('dateFilter').value;
+    const selectedSchool = document.getElementById('schoolFilter').value;
+    const selectedUserType = document.getElementById('userTypeFilter').value;
+    
+    // Count users by type
+    const userCounts = {
+        teacher: users.filter(u => u.type === 'teacher').length,
+        admin: users.filter(u => u.type === 'admin').length,
+        'hq-staff': users.filter(u => u.type === 'hq-staff').length,
+        'school-admin': users.filter(u => u.type === 'school-admin').length,
+        observer: users.filter(u => u.type === 'observer').length
+    };
+    
+    document.getElementById('totalUsers').textContent = users.length;
+    document.getElementById('teacherCount').textContent = userCounts.teacher;
+    document.getElementById('adminCount').textContent = userCounts.admin;
+    document.getElementById('hqStaffCount').textContent = userCounts['hq-staff'];
+    document.getElementById('schoolAdminCount').textContent = userCounts['school-admin'];
+    
+    // Load attendance data
+    const teachers = users.filter(u => u.type === 'teacher');
+    let presentCount = 0;
+    let lateCount = 0;
+    let absentCount = 0;
+
+    const tableBody = document.getElementById('attendanceTable');
+    tableBody.innerHTML = '';
+
+    teachers.forEach(user => {
+        if (selectedSchool && user.school !== selectedSchool) return;
+        if (selectedUserType && user.type !== selectedUserType) return;
+
+        const userAttendance = attendanceHistory[user.username] || [];
+        const todayAttendance = userAttendance.find(a => a.date === selectedDate);
+        
+        let status = "TIDAK HADIR";
+        let time = "-";
+        let location = "-";
+        let statusClass = "status-tidak-hadir";
+
+        if (todayAttendance) {
+            status = todayAttendance.status;
+            time = todayAttendance.time;
+            location = todayAttendance.location ? 
+                `Lokasi Disahkan (${todayAttendance.location.distance ? todayAttendance.location.distance.toFixed(0) : '?'}m)` : 
+                'Lokasi Tidak Disahkan';
+            statusClass = `status-${status.toLowerCase().replace(' ', '-')}`;
+            
+            if (status === 'HADIR') presentCount++;
+            else if (status === 'LEWAT') lateCount++;
+        } else {
+            absentCount++;
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${user.name}</td>
+            <td><span class="status-badge status-${userTypeColors[user.type]}">${userTypeNames[user.type]}</span></td>
+            <td>${user.school || user.department || '-'}</td>
+            <td>${time}</td>
+            <td><span class="status-badge ${statusClass}">${status}</span></td>
+            <td>${location}</td>
+            <td>
+                <button class="btn btn-primary" onclick="viewUserDetails('${user.username}')">Lihat</button>
+                ${status === 'LEWAT' ? '<button class="btn btn-warning" onclick="sendReminder(\'' + user.username + '\')">Peringatan</button>' : ''}
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    // Update statistics
+    document.getElementById('presentToday').textContent = presentCount;
+    document.getElementById('lateToday').textContent = lateCount;
+    document.getElementById('absentToday').textContent = absentCount;
+
+    const totalTeachers = teachers.length;
+    document.getElementById('attendanceRate').textContent = totalTeachers > 0 ? `${Math.round((presentCount/totalTeachers)*100)}% kehadiran` : '0% kehadiran';
+    document.getElementById('lateRate').textContent = totalTeachers > 0 ? `${Math.round((lateCount/totalTeachers)*100)}% lewat` : '0% lewat';
+    document.getElementById('absentRate').textContent = totalTeachers > 0 ? `${Math.round((absentCount/totalTeachers)*100)}% ketidakhadiran` : '0% ketidakhadiran';
+
+    updateLastUpdateTime();
+}
+
+// Load notifications for admin
+function loadNotifications() {
+    const tableBody = document.getElementById('notificationsTable');
+    const allTableBody = document.getElementById('allNotificationsTable');
+    
+    const unreadCount = sampleNotifications.filter(n => !n.read).length;
+    
+    document.getElementById('notificationCount').textContent = `${unreadCount} notifikasi belum dibaca`;
+    
+    // Dashboard notifications
+    tableBody.innerHTML = '';
+    sampleNotifications.forEach(notification => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${notification.time}</td>
+            <td>${notification.user}</td>
+            <td>${notification.type}</td>
+            <td>${notification.message}</td>
+            <td>
+                <button class="btn btn-primary" onclick="viewNotificationDetails(${notification.id})">Urus</button>
+                ${!notification.read ? '<button class="btn btn-success" onclick="markAsRead(' + notification.id + ')">Tandai Baca</button>' : ''}
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+    
+    // All notifications page
+    allTableBody.innerHTML = '';
+    sampleNotifications.forEach(notification => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${notification.read ? '✅' : '📧'}</td>
+            <td>${notification.time}</td>
+            <td>${notification.user}</td>
+            <td>${notification.type}</td>
+            <td>${notification.message}</td>
+            <td>
+                <button class="btn btn-primary" onclick="viewNotificationDetails(${notification.id})">Lihat</button>
+                <button class="btn btn-danger" onclick="deleteNotification(${notification.id})">Padam</button>
+            </td>
+        `;
+        allTableBody.appendChild(row);
+    });
+}
+
+// Load users for admin
+function loadUsers() {
+    const tableBody = document.getElementById('usersTable');
+    tableBody.innerHTML = '';
+    
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${user.name}</td>
+            <td>${user.username}</td>
+            <td>${user.email}</td>
+            <td><span class="status-badge status-${userTypeColors[user.type]}">${userTypeNames[user.type]}</span></td>
+            <td>${user.school || user.department || '-'}</td>
+            <td><span class="status-badge status-hadir">AKTIF</span></td>
+            <td>
+                <button class="btn btn-primary" onclick="viewUserDetails('${user.username}')">Lihat</button>
+                <button class="btn btn-warning" onclick="editUser('${user.username}')">Edit</button>
+                <button class="btn btn-danger" onclick="deleteUser('${user.username}')">Padam</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// Load teachers for admin
+function loadTeachers() {
+    const tableBody = document.getElementById('teachersAdminTable');
+    tableBody.innerHTML = '';
+    
+    const teachers = users.filter(u => u.type === 'teacher');
+    teachers.forEach(teacher => {
+        const attendanceCount = attendanceHistory[teacher.username] ? 
+            attendanceHistory[teacher.username].filter(a => a.status === 'HADIR').length : 0;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${teacher.name}</td>
+            <td>${teacher.username}</td>
+            <td>${teacher.email}</td>
+            <td>${teacher.school}</td>
+            <td>${attendanceCount} hari</td>
+            <td><span class="status-badge status-hadir">AKTIF</span></td>
+            <td>
+                <button class="btn btn-primary" onclick="viewUserDetails('${teacher.username}')">Lihat</button>
+                <button class="btn btn-warning" onclick="sendReminder('${teacher.username}')">Peringatan</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// REAL Excel Export Function
+function exportReport() {
+    document.getElementById('loading').style.display = 'block';
+    
+    const currentDate = new Date().toLocaleDateString('ms-MY').replace(/\//g, '-');
+    const selectedDate = document.getElementById('dateFilter').value;
+    const fileName = `Laporan_Kehadiran_${currentDate}.xlsx`;
+    
+    const excelData = [];
+    
+    // Add header
+    excelData.push(['LAPORAN KEHADIRAN SISTEM Waqt al-Madrasah']);
+    excelData.push([`Tarikh Laporan: ${selectedDate}`]);
+    excelData.push([`Dihasilkan pada: ${new Date().toLocaleString('ms-MY')}`]);
+    excelData.push([]);
+    
+    // Add statistics
+    excelData.push(['STATISTIK SISTEM']);
+    excelData.push(['Jumlah Pengguna:', users.length]);
+    excelData.push(['Jumlah Guru:', users.filter(u => u.type === 'teacher').length]);
+    excelData.push(['Staff HQ:', users.filter(u => u.type === 'hq-staff').length]);
+    excelData.push(['Admin Sekolah:', users.filter(u => u.type === 'school-admin').length]);
+    excelData.push([]);
+    
+    // Add attendance statistics
+    excelData.push(['STATISTIK KEHADIRAN HARIAN']);
+    excelData.push(['Hadir:', document.getElementById('presentToday').textContent]);
+    excelData.push(['Lewat:', document.getElementById('lateToday').textContent]);
+    excelData.push(['Tidak Hadir:', document.getElementById('absentToday').textContent]);
+    excelData.push([]);
+    
+    // Add attendance data header
+    excelData.push(['REKOD KEHADIRAN HARIAN']);
+    excelData.push(['Nama', 'Jenis Pengguna', 'Sekolah/Jabatan', 'Masa Kehadiran', 'Status', 'Lokasi']);
+    
+    // Add attendance data
+    const teachers = users.filter(u => u.type === 'teacher');
+    teachers.forEach(teacher => {
+        const attendance = attendanceHistory[teacher.username] || [];
+        const todayAttendance = attendance.find(a => a.date === selectedDate);
+        
+        excelData.push([
+            teacher.name,
+            userTypeNames[teacher.type],
+            teacher.school || '-',
+            todayAttendance ? todayAttendance.time : '-',
+            todayAttendance ? todayAttendance.status : 'TIDAK HADIR',
+            todayAttendance && todayAttendance.location ? 
+                `Lokasi Disahkan (${todayAttendance.location.distance ? todayAttendance.location.distance.toFixed(0) : '?'}m)` : 
+                'Lokasi Tidak Disahkan'
+        ]);
+    });
+    
+    setTimeout(() => {
+        const ws = XLSX.utils.aoa_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan Kehadiran");
+        XLSX.writeFile(wb, fileName);
+        
+        document.getElementById('loading').style.display = 'none';
+        alert(`Laporan Excel berjaya dihasilkan!\n\nFail: ${fileName}\n\nFail telah dimuat turun ke komputer anda.`);
+    }, 1500);
+}
+
+// Other Admin Functions
+function showAdminSection(sectionName) {
+    // Hide all sections
+    const sections = ['dashboard-section', 'users-section', 'teachers-section', 'reports-section', 'settings-section', 'notifications-section', 'analytics-section'];
+    sections.forEach(section => {
+        document.getElementById(section).classList.add('hidden');
+    });
+    
+    // Show selected section
+    document.getElementById(sectionName + '-section').classList.remove('hidden');
+    
+    // Update sidebar active state
+    document.querySelectorAll('.sidebar-menu a').forEach(link => {
+        link.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Load specific data for section
+    if (sectionName === 'teachers') {
+        loadTeachers();
+    } else if (sectionName === 'users') {
+        loadUsers();
+    }
+}
+
+function viewUserDetails(username) {
+    const user = users.find(t => t.username === username);
+    if (user) {
+        document.getElementById('modalTitle').textContent = 'Butiran Pengguna';
+        document.getElementById('teacherModalContent').innerHTML = `
+            <div class="filter-group">
+                <label>Nama:</label>
+                <p><strong>${user.name}</strong></p>
+            </div>
+            <div class="filter-group">
+                <label>Username:</label>
+                <p>@${user.username}</p>
+            </div>
+            <div class="filter-group">
+                <label>Emel:</label>
+                <p>${user.email}</p>
+            </div>
+            <div class="filter-group">
+                <label>Jenis Akaun:</label>
+                <p><span class="status-badge status-${userTypeColors[user.type]}">${userTypeNames[user.type]}</span></p>
+            </div>
+            ${user.school ? `
+            <div class="filter-group">
+                <label>Sekolah:</label>
+                <p>${user.school}</p>
+            </div>` : ''}
+            ${user.department ? `
+            <div class="filter-group">
+                <label>Jabatan:</label>
+                <p>${user.department}</p>
+            </div>` : ''}
+            <div class="filter-group">
+                <label>Status:</label>
+                <p><span class="status-badge status-hadir">AKTIF</span></p>
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-warning" onclick="editUser('${user.username}')">Edit Maklumat</button>
+                ${user.type === 'teacher' ? '<button class="btn btn-primary" onclick="viewAttendanceHistory(\'' + user.username + '\')">Lihat Sejarah Kehadiran</button>' : ''}
+            </div>
+        `;
+        openModal('teacherModal');
+    }
+}
+
+function viewNotificationDetails(notificationId) {
+    const notification = sampleNotifications.find(n => n.id === notificationId);
+    if (notification) {
+        document.getElementById('notificationModalContent').innerHTML = `
+            <div class="filter-group">
+                <label>Masa:</label>
+                <p><strong>${notification.time}</strong></p>
+            </div>
+            <div class="filter-group">
+                <label>Pengguna:</label>
+                <p>${notification.user}</p>
+            </div>
+            <div class="filter-group">
+                <label>Jenis:</label>
+                <p>${notification.type}</p>
+            </div>
+            <div class="filter-group">
+                <label>Mesej:</label>
+                <p>${notification.message}</p>
+            </div>
+            <div class="filter-group">
+                <label>Tindakan:</label>
+                <div>
+                    <button class="btn btn-success" onclick="resolveNotification(${notificationId})">Selesaikan</button>
+                    <button class="btn btn-primary" onclick="contactUser('${notification.user}')">Hubungi</button>
+                    ${!notification.read ? '<button class="btn btn-warning" onclick="markAsRead(' + notificationId + ')">Tandai Sudah Dibaca</button>' : ''}
+                </div>
+            </div>
+        `;
+        openModal('notificationModal');
+    }
+}
+
+function sendReminder(username) {
+    const user = users.find(t => t.username === username);
+    if (user) {
+        alert(`Peringatan dihantar kepada ${user.name}`);
+    }
+}
+
+function markAsRead(notificationId) {
+    const notification = sampleNotifications.find(n => n.id === notificationId);
+    if (notification) {
+        notification.read = true;
+        loadNotifications();
+        alert('Notifikasi ditandai sebagai sudah dibaca');
+    }
+}
+
+function markAllAsRead() {
+    sampleNotifications.forEach(notification => {
+        notification.read = true;
+    });
+    loadNotifications();
+    alert('Semua notifikasi ditandai sebagai sudah dibaca');
+}
+
+function deleteNotification(notificationId) {
+    if (confirm('Adakah anda pasti ingin memadam notifikasi ini?')) {
+        const index = sampleNotifications.findIndex(n => n.id === notificationId);
+        if (index !== -1) {
+            sampleNotifications.splice(index, 1);
+            loadNotifications();
+            alert('Notifikasi berjaya dipadam');
+        }
+    }
+}
+
+function showAddUserModal() {
+    openModal('addUserModal');
+}
+
+function addNewUser() {
+    const name = document.getElementById('newUserName').value;
+    const email = document.getElementById('newUserEmail').value;
+    const username = document.getElementById('newUserUsername').value;
+    const userType = document.getElementById('newUserType').value;
+    const school = document.getElementById('newUserSchool').value;
+    const department = document.getElementById('newUserDepartment').value;
+    
+    if (name && email && username && userType) {
+        // Check if username already exists
+        if (users.find(u => u.username === username)) {
+            alert("Username ini sudah digunakan. Sila pilih username lain.");
+            return;
+        }
+        
+        // Check if email already exists
+        if (users.find(u => u.email === email)) {
+            alert("Emel ini sudah didaftarkan.");
+            return;
+        }
+        
+        const newUser = {
+            name: name,
+            email: email,
+            username: username,
+            type: userType,
+            password: "default123",
+            pic: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        };
+        
+        // Add additional fields based on user type
+        if (userType === 'teacher' || userType === 'school-admin') {
+            newUser.school = school;
+        } else if (userType === 'hq-staff') {
+            newUser.department = department;
+        }
+        
+        users.push(newUser);
+        localStorage.setItem('users', JSON.stringify(users));
+        loadUsers();
+        closeModal('addUserModal');
+        alert('Pengguna baru berjaya ditambah');
+        
+        // Reset form
+        document.getElementById('newUserName').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUserUsername').value = '';
+    } else {
+        alert('Sila isi semua maklumat yang diperlukan');
+    }
+}
+
+function generateMonthlyReport() {
+    document.getElementById('reportsContent').innerHTML = `
+        <div class="table-header">
+            <h3>Laporan Kehadiran Bulanan - ${new Date().toLocaleDateString('ms-MY', { month: 'long', year: 'numeric' })}</h3>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nama Guru</th>
+                    <th>Sekolah</th>
+                    <th>Hadir</th>
+                    <th>Lewat</th>
+                    <th>Tidak Hadir</th>
+                    <th>Peratus Kehadiran</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.filter(u => u.type === 'teacher').map(teacher => {
+                    const attendance = attendanceHistory[teacher.username] || [];
+                    const hadir = attendance.filter(a => a.status === 'HADIR' && !a.isLate).length;
+                    const lewat = attendance.filter(a => a.status === 'HADIR' && a.isLate).length;
+                    const tidakHadir = attendance.filter(a => a.status === 'TIDAK HADIR').length;
+                    const total = hadir + lewat + tidakHadir;
+                    const percentage = total > 0 ? Math.round((hadir/total)*100) : 0;
+                    
+                    return `
+                        <tr>
+                            <td>${teacher.name}</td>
+                            <td>${teacher.school}</td>
+                            <td>${hadir}</td>
+                            <td>${lewat}</td>
+                            <td>${tidakHadir}</td>
+                            <td>${percentage}%</td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+        <div style="margin-top: 1rem;">
+            <button class="btn btn-success" onclick="exportMonthlyReport()">Eksport Laporan Bulanan</button>
+        </div>
+    `;
+}
+
+function generateSchoolReport() {
+    const schools = {};
+    
+    users.filter(u => u.type === 'teacher').forEach(teacher => {
+        if (!schools[teacher.school]) {
+            schools[teacher.school] = { total: 0, hadir: 0, lewat: 0 };
+        }
+        
+        const attendance = attendanceHistory[teacher.username] || [];
+        schools[teacher.school].hadir += attendance.filter(a => a.status === 'HADIR' && !a.isLate).length;
+        schools[teacher.school].lewat += attendance.filter(a => a.status === 'HADIR' && a.isLate).length;
+        schools[teacher.school].total++;
+    });
+    
+    document.getElementById('reportsContent').innerHTML = `
+        <div class="table-header">
+            <h3>Laporan Mengikut Sekolah</h3>
+        </div>
+        <div class="stats-grid">
+            ${Object.keys(schools).map(school => {
+                const data = schools[school];
+                const percentage = data.total > 0 ? Math.round((data.hadir/data.total)*100) : 0;
+                
+                return `
+                    <div class="stat-card total">
+                        <h3>${school}</h3>
+                        <div class="stat-number">${data.total}</div>
+                        <p>Jumlah Guru</p>
+                        <p>${data.hadir} hadir tepat waktu</p>
+                        <p>${data.lewat} hadir lewat</p>
+                        <p><strong>${percentage}% kehadiran</strong></p>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function generateUserTypeReport() {
+    const userTypeStats = {};
+    
+    users.forEach(user => {
+        if (!userTypeStats[user.type]) {
+            userTypeStats[user.type] = 0;
+        }
+        userTypeStats[user.type]++;
+    });
+    
+    document.getElementById('reportsContent').innerHTML = `
+        <div class="table-header">
+            <h3>Laporan Jenis Pengguna</h3>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Jenis Pengguna</th>
+                    <th>Bilangan</th>
+                    <th>Peratusan</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${Object.keys(userTypeStats).map(type => {
+                    const count = userTypeStats[type];
+                    const percentage = Math.round((count/users.length)*100);
+                    
+                    return `
+                        <tr>
+                            <td><span class="status-badge status-${userTypeColors[type]}">${userTypeNames[type]}</span></td>
+                            <td>${count}</td>
+                            <td>${percentage}%</td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function saveSettings() {
+    const schoolTime = document.getElementById('schoolTime').value;
+    const lateThreshold = document.getElementById('lateThreshold').value;
+    const locationRadius = document.getElementById('locationRadius').value;
+    const notificationEmail = document.getElementById('notificationEmail').value;
+    
+    systemSettings = {
+        schoolTime,
+        lateThreshold: parseInt(lateThreshold),
+        locationRadius: parseInt(locationRadius),
+        notificationEmail
+    };
+    
+    localStorage.setItem('systemSettings', JSON.stringify(systemSettings));
+    
+    alert(`Tetapan disimpan:\nMasa Sekolah: ${schoolTime}\nAmbang Lewat: ${lateThreshold} minit\nRadius Lokasi: ${locationRadius} meter\nEmel Notifikasi: ${notificationEmail}`);
+}
+
+function resolveNotification(notificationId) {
+    if (confirm('Adakah anda pasti ingin menandai notifikasi ini sebagai selesai?')) {
+        const index = sampleNotifications.findIndex(n => n.id === notificationId);
+        if (index !== -1) {
+            sampleNotifications.splice(index, 1);
+            loadNotifications();
+            closeModal('notificationModal');
+            alert('Notifikasi ditandai sebagai selesai');
+        }
+    }
+}
+
+function contactUser(userName) {
+    alert(`Fungsi menghubungi ${userName} akan diaktifkan`);
+}
+
+function viewAttendanceHistory(username) {
+    const user = users.find(t => t.username === username);
+    if (user) {
+        const userAttendance = attendanceHistory[username] || [];
+        
+        document.getElementById('modalTitle').textContent = `Sejarah Kehadiran - ${user.name}`;
+        document.getElementById('teacherModalContent').innerHTML = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tarikh</th>
+                            <th>Status</th>
+                            <th>Masa</th>
+                            <th>Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${userAttendance.slice(-10).reverse().map(record => `
+                            <tr>
+                                <td>${record.date}</td>
+                                <td><span class="status-badge status-${record.status === 'HADIR' ? (record.isLate ? 'lewat' : 'hadir') : 'tidak-hadir'}">${record.status}${record.isLate ? ' (LEWAT)' : ''}</span></td>
+                                <td>${record.time}</td>
+                                <td>${record.location ? `Lokasi: ${record.location.verified ? 'Disahkan' : 'Tidak Disahkan'}` : '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        openModal('teacherModal');
+    }
+}
+
+// Utility Functions
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function updateLastUpdateTime() {
+    const now = new Date().toLocaleString('ms-MY');
+    document.getElementById('lastUpdate').textContent = `Kemaskini Terakhir: ${now}`;
+}
+
+function startRealTimeUpdates() {
+    setInterval(() => {
+        updateLastUpdateTime();
+    }, 30000);
+}
+
+// Placeholder functions for edit and delete user
+function editUser(username) {
+    alert(`Edit pengguna: ${username} - Fungsi akan dibangunkan`);
+}
+
+function deleteUser(username) {
+    if (confirm('Adakah anda pasti ingin memadam pengguna ini?')) {
+        const index = users.findIndex(t => t.username === username);
+        if (index !== -1) {
+            users.splice(index, 1);
+            localStorage.setItem('users', JSON.stringify(users));
+            loadUsers();
+            alert('Pengguna berjaya dipadam');
+        }
+    }
+}
+
+function exportMonthlyReport() {
+    alert('Laporan bulanan berjaya dieksport dalam format Excel');
+}
+
+// Logout
+function logout() {
+    currentUser = null;
+    localStorage.removeItem('currentUser');
+    
+    document.getElementById('attendancePage').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('navbar').classList.add('hidden');
+    
+    document.getElementById('dropdownMenu').style.display = "none";
+}
+
+// Functions for HQ Staff and School Admin
+function showAttendanceReport() {
+    alert('Membuka laporan kehadiran...');
+}
+
+function showUserManagement() {
+    alert('Membuka pengurusan pengguna...');
+}
+
+// Initialize the app when page loads
+window.onload = init;
+</script>
+</body>
+</html>
